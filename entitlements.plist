@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- File access for user-selected files -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- Allow spawning subprocess (Python signer) -->
+    <key>com.apple.security.inherit</key>
+    <true/>
+    
+    <!-- Smart card access for Belgian eID -->
+    <key>com.apple.security.smartcard</key>
+    <true/>
+    
+    <!-- Network access (might be needed for timestamp servers) -->
+    <key>com.apple.security.network.client</key>
+    <false/>
+    
+    <!-- Allow access to Belgian eID PKCS#11 library -->
+    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+    <array>
+        <string>com.belgium.eid.middleware</string>
+    </array>
+
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- ONLY what's needed for BEID -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
