@@ -1,0 +1,227 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a release (even without tag)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build:
+    name: Build Autograph
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            signing-tool/.venv
+          key: ${{ runner.os }}-python-${{ hashFiles('signing-tool/pyproject.toml', 'signing-tool/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-python-
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: npm run build
+
+      - name: Build Python signer
+        run: |
+          cd signing-tool
+          ./build.sh
+          cd ..
+          # Verify the binary was created
+          if [ ! -f "python-dist/autograph-signer/main.bin" ]; then
+            echo "Error: Python signer binary not found!"
+            exit 1
+          fi
+
+      - name: Import Apple certificate
+        if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Import certificate from secrets
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Clean up
+          rm $CERTIFICATE_PATH
+
+      - name: Package and sign app
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          CI: true
+        run: |
+          # Save API key if provided
+          if [ ! -z "$APPLE_API_KEY" ]; then
+            mkdir -p ~/.appstoreconnect/private_keys
+            echo "$APPLE_API_KEY" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
+          fi
+          
+          # Run Electron Forge make
+          npm run make
+
+      - name: Clean up keychain
+        if: always() && (github.event_name == 'push' || startsWith(github.ref, 'refs/tags/'))
+        run: |
+          if [ -f "$RUNNER_TEMP/app-signing.keychain-db" ]; then
+            security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+          fi
+
+      - name: Verify build outputs
+        run: |
+          echo "Checking for DMG..."
+          DMG_FILE=$(find out/make -name "*.dmg" | head -1)
+          if [ -z "$DMG_FILE" ]; then
+            echo "Error: DMG file not found!"
+            exit 1
+          fi
+          echo "Found DMG: $DMG_FILE"
+          
+          echo "Checking for ZIP..."
+          ZIP_FILE=$(find out/make -name "*.zip" | head -1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: ZIP file not found!"
+            exit 1
+          fi
+          echo "Found ZIP: $ZIP_FILE"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autograph-dmg-${{ github.sha }}
+          path: out/make/*.dmg
+          retention-days: 30
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autograph-zip-${{ github.sha }}
+          path: out/make/**/*.zip
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get version from tag or package.json
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="v$(node -p "require('./package.json').version")-dev"
+          fi
+          
+          echo "Creating release for version: $VERSION"
+          
+          # Find build artifacts
+          DMG_FILE=$(find out/make -name "*.dmg" | head -1)
+          ZIP_FILE=$(find out/make -name "*.zip" | head -1)
+          
+          # Create release
+          gh release create "$VERSION" \
+            --title "Autograph $VERSION" \
+            --notes "Release of Autograph $VERSION
+            
+          ## What's New
+          - Belgian eID integration for PDF signing
+          - Visual signature placement
+          - File integrity verification
+          - macOS native app with code signing and notarization
+
+          ## Installation
+          1. Download the DMG file for macOS
+          2. Open the DMG and drag Autograph to Applications
+          3. Ensure Belgian eID middleware is installed from https://eid.belgium.be
+
+          ## Requirements
+          - macOS 10.15 (Catalina) or later
+          - Belgian eID card and compatible reader
+          - Belgian eID middleware installed
+
+          ## Changelog
+          See commit history for detailed changes." \
+            "$DMG_FILE" \
+            "$ZIP_FILE" \
+            --draft=${{ github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Post-build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get file sizes
+          DMG_FILE=$(find out/make -name "*.dmg" | head -1)
+          ZIP_FILE=$(find out/make -name "*.zip" | head -1)
+          
+          if [ -f "$DMG_FILE" ]; then
+            DMG_SIZE=$(du -h "$DMG_FILE" | cut -f1)
+            echo "- **DMG**: $(basename "$DMG_FILE") ($DMG_SIZE)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f "$ZIP_FILE" ]; then
+            ZIP_SIZE=$(du -h "$ZIP_FILE" | cut -f1)
+            echo "- **ZIP**: $(basename "$ZIP_FILE") ($ZIP_SIZE)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "✅ Release created! Check the [Releases](https://github.com/${{ github.repository }}/releases) page." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📦 Build artifacts are available in the [Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) tab." >> $GITHUB_STEP_SUMMARY
+          fi

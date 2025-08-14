@@ -1,7 +1,7 @@
 {
   "name": "autograph",
   "productName": "autograph",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "My Electron application description",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -49,6 +49,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^17.2.1",
     "graphene-pk11": "^2.3.6",
     "lucide-react": "^0.539.0",
     "motion": "^12.23.12",

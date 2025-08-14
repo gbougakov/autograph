@@ -1,5 +1,6 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+require('dotenv').config();
 
 module.exports = {
   packagerConfig: {
@@ -13,20 +14,12 @@ module.exports = {
     ],
     ignore: ['signing-tool'],
     osxSign: {
-      identity: process.env.CODESIGN_IDENTITY,
-      optionsForFile: (filePath) => {
-        // This returns the per-file signing options
-        const fileName = path.basename(filePath);
-        const entitlementsPath = path.resolve(__dirname, 'entitlements.plist');
-        
-        console.log(`Signing ${fileName} with entitlements: ${entitlementsPath}`);
-        
+       optionsForFile: (filePath) => {
+        // Here, we keep it simple and return a single entitlements.plist file.
+        // You can use this callback to map different sets of entitlements
+        // to specific files in your packaged app.
         return {
-          hardenedRuntime: true,
-          entitlements: entitlementsPath,
-          // For helper apps, you might want different entitlements
-          // but for BEID, use the same for all
-          'entitlements-inherit': entitlementsPath,
+          entitlements: 'entitlements.plist'
         };
       }
     },
