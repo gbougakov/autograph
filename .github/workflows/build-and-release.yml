@@ -50,9 +50,18 @@ jobs:
           path: |
             ~/.cache/uv
             signing-tool/.venv
-          key: ${{ runner.os }}-python-${{ hashFiles('signing-tool/pyproject.toml', 'signing-tool/uv.lock') }}
+          key: ${{ runner.os }}-python-deps-${{ hashFiles('signing-tool/pyproject.toml', 'signing-tool/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-python-
+            ${{ runner.os }}-python-deps-
+
+      - name: Cache Python build output
+        id: python-build-cache
+        uses: actions/cache@v4
+        with:
+          path: python-dist
+          key: ${{ runner.os }}-python-build-${{ hashFiles('signing-tool/**/*.py', 'signing-tool/pyproject.toml', 'signing-tool/uv.lock', 'signing-tool/build.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-python-build-
 
       - name: Install Node dependencies
         run: npm ci
@@ -61,15 +70,24 @@ jobs:
         run: npm run build
 
       - name: Build Python signer
+        if: steps.python-build-cache.outputs.cache-hit != 'true'
         run: |
+          echo "Building Python signer from source..."
           cd signing-tool
           ./build.sh
           cd ..
-          # Verify the binary was created
+          
+      - name: Verify Python signer binary
+        run: |
+          # Verify the binary exists (either from cache or fresh build)
           if [ ! -f "python-dist/autograph-signer/main.bin" ]; then
             echo "Error: Python signer binary not found!"
+            echo "Cache hit: ${{ steps.python-build-cache.outputs.cache-hit }}"
+            ls -la python-dist/ || echo "python-dist directory not found"
             exit 1
           fi
+          echo "Python signer binary found at python-dist/autograph-signer/main.bin"
+          echo "Binary size: $(du -h python-dist/autograph-signer/main.bin | cut -f1)"
 
       - name: Import Apple certificate
         if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
