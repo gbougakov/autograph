@@ -13,7 +13,7 @@ module.exports = {
       './python-dist'
     ],
     ignore: ['signing-tool'],
-    osxSign: {
+    osxSign: process.env.CI ? {
        optionsForFile: (filePath) => {
         // Here, we keep it simple and return a single entitlements.plist file.
         // You can use this callback to map different sets of entitlements
@@ -22,13 +22,13 @@ module.exports = {
           entitlements: 'entitlements.plist'
         };
       }
-    },
-    osxNotarize: {
+    } : undefined,
+    osxNotarize: process.env.APPLE_API_KEY ? {
       tool: 'notarytool',
       appleApiKey: process.env.APPLE_API_KEY,
       appleApiKeyId: process.env.APPLE_API_KEY_ID,
       appleApiIssuer: process.env.APPLE_API_ISSUER
-    }
+    } : undefined
   },
   rebuildConfig: {},
   makers: [
