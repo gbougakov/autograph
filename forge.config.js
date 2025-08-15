@@ -12,6 +12,7 @@ module.exports = {
     extraResource: [
       './python-dist'
     ],
+    icon: './icons/icon',
     ignore: ['signing-tool'],
     osxSign: process.env.CI ? {
        optionsForFile: (filePath) => {
