@@ -99,6 +99,8 @@ For issues and feature requests, please use the GitHub Issues page.
 
 ## Acknowledgments
 
-- Belgian Federal Government for eID infrastructure
-- Mozilla for PDF.js library
-- pyHanko contributors for PDF signing capabilities
+First of all, a big thank you to [Matthias Valvekens](https://mvalvekens.be/) and other contributors for creating pyHanko, the Python package without which this app would simply not exist.
+
+Additionally, I would like to thank the Belgian Federal Government and the Federal Public Service of Policy and Support for creating a very flexible, standards-compliant and [well-documented](https://github.com/Fedict/eid-mw/tree/master/doc/sdk/documentation) eID system, and for open sourcing the [eID middleware](https://github.com/Fedict/eid-mw).
+
+And last but not least — Mozilla, for the PDF.js project.
