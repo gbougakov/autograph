@@ -140,9 +140,9 @@ jobs:
           # Only sign and notarize on main branch and tags
           SKIP_NOTARIZE: ${{ !(github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')) }}
         run: |
-          # Run Electron Forge make
+          # Run Electron Forge make without rebuilding Python (already built/cached)
           # Notarization will be skipped if APPLE_API_KEY is not set
-          npm run make
+          npm run make-without-python
 
       - name: Clean up keychain
         if: always() && (github.event_name == 'push' || startsWith(github.ref, 'refs/tags/'))

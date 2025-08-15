@@ -37,6 +37,7 @@ uv pip install nuitka
 echo "Compiling with Nuitka..."
 uv run python3 -m nuitka \
     --follow-imports \
+    --assume-yes-for-downloads \
     --include-package=fontTools \
     --mode=standalone \
     main.py
