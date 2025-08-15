@@ -2,11 +2,8 @@ name: Build and Release
 
 on:
   push:
-    # branches: [ main ]
     tags:
       - 'v*.*.*'
-  # pull_request:
-  #   branches: [ main ]
   workflow_dispatch:
     inputs:
       create_release:
@@ -90,7 +87,6 @@ jobs:
           echo "Binary size: $(du -h python-dist/autograph-signer/main.bin | cut -f1)"
 
       - name: Import Apple certificate
-        if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -117,7 +113,6 @@ jobs:
           rm $CERTIFICATE_PATH
 
       - name: Setup notarization credentials
-        if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
