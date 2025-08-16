@@ -13,7 +13,46 @@ module.exports = {
       './python-dist'
     ],
     icon: './icons/icon',
-    ignore: ['signing-tool'],
+    ignore: [
+      // Development and source files
+      /^\/src$/,
+      /^\/signing-tool$/,
+      /^\/python-dist$/,  // Handled by extraResource
+      
+      // Build artifacts and caches
+      /^\/out$/,
+      /^\/\.vite$/,
+      /^\/.git$/,
+      
+      // Config files not needed in production
+      /^\/\.env/,
+      /^\/\.gitignore$/,
+      /^\/\.DS_Store$/,
+      /^\/vite\.config\.js$/,
+      /^\/tailwind\.config\.js$/,
+      /^\/tsconfig.*\.json$/,
+      /^\/postcss\.config\.js$/,
+      /^\/components\.json$/,
+      /^\/package-lock\.json$/,
+      
+      // Documentation (except required legal files)
+      /^\/README\.md$/,
+      /^\/CLAUDE\.md$/,
+      
+      // Development scripts
+      /^\/main\.js$/,  // Source version (using dist-electron/main.js)
+      /^\/preload\.js$/,  // Source version (using dist-electron/preload.js)
+      /^\/index\.html$/,  // Source version (using dist/index.html)
+      
+      // Test files
+      /\.test\./,
+      /\.spec\./,
+      /__tests__/,
+      
+      // macOS specific
+      /\.DS_Store$/,
+      /Thumbs\.db$/
+    ],
     osxSign: process.env.CI ? {
        optionsForFile: (filePath) => {
         // Here, we keep it simple and return a single entitlements.plist file.
@@ -31,7 +70,10 @@ module.exports = {
       appleApiIssuer: process.env.APPLE_API_ISSUER
     } : undefined
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    // Ensure native modules are rebuilt for the target platform
+    onlyModules: ['graphene-pk11']
+  },
   makers: [
     {
       name: '@electron-forge/maker-dmg',

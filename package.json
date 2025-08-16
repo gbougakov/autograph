@@ -40,21 +40,21 @@
     "typescript": "^5.9.2",
     "vite": "^7.1.1",
     "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6"
-  },
-  "type": "commonjs",
-  "dependencies": {
+    "vite-plugin-electron-renderer": "^0.14.6",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-radio-group": "^1.3.7",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.1",
-    "graphene-pk11": "^2.3.6",
     "lucide-react": "^0.539.0",
     "motion": "^12.23.12",
     "pdfjs-dist": "^5.4.54",
     "tailwind-merge": "^3.3.1",
     "tw-animate-css": "^1.3.6"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "graphene-pk11": "^2.3.6"
   }
 }
