@@ -10,6 +10,7 @@ interface PDFViewerProps {
   file: string;
   onSignaturePositionSelect: (position: PDFCoordinates) => void;
   onStateChange?: (state: PDFViewerState) => void;
+  signaturePosition?: PDFCoordinates | null;
 }
 
 export interface PDFViewerState {
@@ -31,7 +32,8 @@ export interface PDFViewerHandle {
 const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({
   file,
   onSignaturePositionSelect,
-  onStateChange
+  onStateChange,
+  signaturePosition
 }, ref) => {
   const [pdfDocument, setPdfDocument] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +41,8 @@ const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({
   const [scale, setScale] = useState(1.0);
   const [pageObj, setPageObj] = useState<pdfjsLib.PDFPageProxy | null>(null);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
-  const [selectedPosition, setSelectedPosition] = useState<PDFCoordinates | null>(null);
+  // Use signaturePosition from parent, fallback to null
+  const selectedPosition = signaturePosition;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -151,7 +154,6 @@ const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({
   }), [currentPage, totalPages, scale]);
 
   const handleSignatureSelect = (position: PDFCoordinates) => {
-    setSelectedPosition(position);
     onSignaturePositionSelect(position);
   };
 

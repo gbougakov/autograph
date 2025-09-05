@@ -103,6 +103,18 @@ function App() {
         
         if (savedPath) {
           alert(`PDF signed and saved successfully!`);
+          // Automatically open the signed PDF
+          setPdfFile(savedPath);
+          setSignaturePosition(null);
+          
+          // Calculate hash for the new signed file
+          try {
+            const newHash = await window.electronAPI.calculateFileHash(savedPath);
+            setFileHash(newHash);
+            setIsFileVerified(true);
+          } catch (error) {
+            console.error('Error calculating hash for signed file:', error);
+          }
         } else {
           alert('PDF signed but save was cancelled. The signed file is in a temporary location.');
         }
@@ -143,6 +155,7 @@ function App() {
               file={pdfFile}
               onSignaturePositionSelect={setSignaturePosition}
               onStateChange={setPdfState}
+              signaturePosition={signaturePosition}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

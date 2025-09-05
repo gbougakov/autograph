@@ -39,6 +39,7 @@ uv run python3 -m nuitka \
     --follow-imports \
     --assume-yes-for-downloads \
     --include-package=fontTools \
+    --nofollow-import-to=*.testTools \
     --mode=standalone \
     main.py
 
