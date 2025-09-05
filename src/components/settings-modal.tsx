@@ -44,7 +44,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
         <div className="pt-4 border-t">
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            <p>Autograph v1.0.0</p>
+            <p>Autograph</p>
             <p className="mt-1">Belgian eID PDF Signing Application</p>
           </div>
         </div>

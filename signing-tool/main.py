@@ -8,6 +8,7 @@ import sys
 import json
 import hashlib
 import traceback
+import uuid
 from pathlib import Path
 
 from pyhanko.sign.fields import SigFieldSpec
@@ -102,19 +103,20 @@ def sign_pdf(input_data: dict) -> dict:
         pdf_buffer = io.BytesIO(pdf_bytes)
         w = IncrementalPdfFileWriter(pdf_buffer)
         
+        # Generate unique field name for multiple signature support
+        field_name = f"Signature_{uuid.uuid4().hex[:8]}"
+        
         # Add signature field if visible
         if visible:
             sig_field_spec = SigFieldSpec(
-                "Signature",
+                field_name,
                 box=(x, y, x + width, y + height),
                 on_page=page
             )
             fields.append_signature_field(w, sig_field_spec=sig_field_spec)
-            field_name = "Signature"
         else:
             # For invisible signatures, we still need a field
-            fields.append_signature_field(w, sig_field_spec=SigFieldSpec("Signature"))
-            field_name = "Signature"
+            fields.append_signature_field(w, sig_field_spec=SigFieldSpec(field_name))
         
         # Open session with Belgian eID
         session = open_beid_session(BEID_LIB_PATH)
